@@ -1,0 +1,17 @@
+# Runtime dependencies for the deployed server (no geopandas/pyhdf/earthaccess: those are only for data-prep scripts)
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+httpx==0.28.1
+sgp4==2.23
+numpy>=1.26
+pandas>=2.2
+scipy>=1.11
+shapely>=2.0
+pyarrow>=15
+pillow>=10
+contourpy>=1.2
+rasterio>=1.4
+pyproj>=3.6
+xarray>=2024.1
+eccodes>=2.38
+cfgrib>=0.9.14

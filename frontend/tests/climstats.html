@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>climstats tests</title>
+<style>body{font:14px system-ui;background:#0b1020;color:#e5e7eb;padding:20px}.ok{color:#4ade80}.bad{color:#f87171}</style></head>
+<body><h1>climstats.js vs Python reference</h1><pre id="out">running…</pre>
+<script type="module">
+import * as S from '../js/climstats.js';
+const f = await fetch('fixture.json').then(r => r.json());
+const { x1, x2, y, ties, months } = f.inputs, E = f.expected;
+const N = a => a.map(v => (v == null ? NaN : v));
+const res = [];
+const close = (name, a, b, tol = 1e-6) => {
+  const ok = (a == null && b == null) || (Number.isNaN(a) && b == null) || Math.abs(a - b) <= tol * Math.max(1, Math.abs(b));
+  res.push([ok, `${name}: js=${a} py=${b}`]);
+};
+const arr = (name, a, b, tol) => a.forEach((v, i) => close(`${name}[${i}]`, Number.isNaN(v) ? null : v, b[i], tol));
+for (const [k, c] of [['pearson', S.correlate(x1, N(y), 'pearson')], ['spearman_ties', S.correlate(ties, N(y), 'spearman')]])
+  for (const f of ['r', 'p', 'n', 'n_eff', 'p_adj']) close(`${k}.${f}`, c[f], E[k][f], 1e-6);
+arr('deseason', S.deseasonalise(N(y), months), E.deseason);
+arr('deseason_std', S.deseasonalise(N(y), months, true), E.deseason_std);
+arr('detrend', S.detrend(N(y)), E.detrend);
+const o = S.ols(N(y), [x1, x2], ['x1', 'x2']);
+for (const f of ['n', 'r2', 'adj_r2', 'durbin_watson']) close(`ols.${f}`, o[f], E.ols[f]);
+o.coef.forEach((c, i) => ['b', 'se', 't', 'p', 'vif'].forEach(k => close(`ols.${c.name}.${k}`, c[k], E.ols.coef[i][k], 1e-6)));
+const fails = res.filter(r => !r[0]);
+document.getElementById('out').innerHTML = `<b class="${fails.length ? 'bad' : 'ok'}">${res.length - fails.length}/${res.length} passed</b>\n` +
+  (fails.length ? fails.map(r => r[1]).join('\n') : '');
+window.TEST_RESULT = { total: res.length, failed: fails.length, fails: fails.map(r => r[1]).slice(0, 10) };
+</script></body></html>

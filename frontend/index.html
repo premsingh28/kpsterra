@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KPSTerra</title>
+  <meta name="description" content="KPSTerra (KPS + Earth): Earth observation, climate, water and fire analytics by Katroth Premsingh: live fires, satellite tracking, fire history and fire-spread simulation for India.">
+  <meta name="author" content="Katroth Premsingh">
+  <link rel="icon" type="image/png" href="assets/favicon-64.png">
+  <link rel="apple-touch-icon" href="assets/kpsterra-logo-192.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand" title="KPSTerra: KPS + Earth, by Katroth Premsingh"><canvas class="logo" data-logo width="56" height="56" role="img" aria-label="KPSTerra logo: Earth with a satellite in orbit and fire over India"></canvas><span class="wordmark"><span class="wm-kps">KPS</span><span class="wm-terra">Terra</span></span></div>
+  <div class="live-badge" title="Current time"><i class="dot"></i>LIVE <b id="clock-ist">--:--</b><small>IST</small><span class="sep">·</span><b id="clock-utc">--:--</b><small>UTC</small></div>
+  <nav id="nav" aria-label="Main">
+    <button data-page="map" class="active">Live Map</button>
+    <button data-page="analytics">Fire Analytics</button>
+    <button data-page="climate">Climate–Fire</button>
+    <button data-page="danger">Fire Danger</button>
+    <button data-page="india">India Dashboard</button>
+    <button data-page="research">Research</button>
+    <button data-page="catalogue">Data Catalogue</button>
+    <button data-page="about">About</button>
+  </nav>
+  <div class="search">
+    <input id="search" type="search" placeholder="State or lat, lon" aria-label="Search state or coordinates" list="state-list">
+    <datalist id="state-list"></datalist>
+  </div>
+  <button id="menu-btn" class="icon-btn mobile-only" aria-label="Menu">☰</button>
+</header>
+
+<main id="page-map" class="page active">
+  <div id="map"></div>
+  <canvas id="wind-canvas"></canvas>
+
+  <!-- right icon rail -->
+  <div class="rail" role="toolbar" aria-label="Map tools">
+    <button data-pop="layers" title="Layer list" aria-label="Layer list"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></button>
+    <button data-pop="basemaps" title="Basemap" aria-label="Basemap"><svg viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></svg></button>
+    <button data-tog="sats" title="Satellites" aria-label="Satellites" class="on"><svg viewBox="0 0 24 24"><path d="m13 7 4-4 4 4-4 4Z"/><path d="m3 17 4-4 4 4-4 4Z"/><path d="m9 9 6 6"/><path d="M16 21a5 5 0 0 0 5-5M16 17a1 1 0 0 0 1-1"/></svg></button>
+    <button data-tog="wind" title="Wind (GFS)" aria-label="Wind"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg></button>
+    <hr>
+    <button data-tool="sim" title="Fire spread simulation (Rothermel)" aria-label="Fire spread simulation"><svg viewBox="0 0 24 24"><path d="M12 2c1 3 4 5 4 9a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 0-8Z"/><path d="M6 15a6 6 0 0 0 12 0"/></svg></button>
+    <button data-tool="measure" title="Measure distance" aria-label="Measure"><svg viewBox="0 0 24 24"><path d="m3 17 14-14 4 4L7 21Z"/><path d="m7 11 2 2M10 8l2 2M13 5l2 2"/></svg></button>
+    <button data-tool="draw" id="draw-btn" title="Draw an area for statistics" aria-label="Draw area"><svg viewBox="0 0 24 24"><path d="m12 3 9 6.5-3.5 10.5h-11L3 9.5Z"/></svg></button>
+    <button data-tool="share" title="Copy link to this view" aria-label="Share"><svg viewBox="0 0 24 24"><path d="M4 12v8h16v-8"/><path d="M12 3v12M7 8l5-5 5 5"/></svg></button>
+    <button data-tool="png" id="png-btn" title="Export map as PNG" aria-label="Export PNG"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 7"/></svg></button>
+    <hr>
+    <button data-pop="legend" id="legend-btn" title="Legend" aria-label="Legend"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
+    <button data-pop="info" title="Statistics" aria-label="Statistics"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></button>
+  </div>
+
+  <!-- layer list -->
+  <aside id="layers" class="pop panel-left" hidden>
+    <div class="panel-head"><h2>Layer list</h2><button class="icon-btn x" data-close="layers" aria-label="Close">✕</button></div>
+    <div class="panel-body">
+      <input id="layer-q" class="layer-q" type="search" placeholder="Search layers…" aria-label="Search layers">
+
+      <details open class="grp"><summary>Fire</summary>
+        <div class="lyr" data-k="fires active fire firms viirs modis hotspot">
+          <label class="chk"><input type="checkbox" id="lyr-fires" checked> Active fires (satellite) <span class="tag live">NRT</span></label>
+          <div class="sub">
+            <label>Product<select id="fire-source">
+              <option value="VIIRS_NOAA20_NRT">VIIRS 375 m · NOAA-20</option><option value="VIIRS_NOAA21_NRT">VIIRS 375 m · NOAA-21</option>
+              <option value="VIIRS_SNPP_NRT">VIIRS 375 m · Suomi-NPP</option><option value="MODIS_NRT">MODIS 1 km · Terra/Aqua</option></select></label>
+            <div class="row">
+              <label>Period<select id="fire-days"><option value="1">24 h</option><option value="2">48 h</option><option value="3">3 days</option><option value="5">5 days</option></select></label>
+              <label>Region<select id="fire-region"><option value="india">India</option><option value="world">World</option></select></label>
+            </div>
+            <label>Display<select id="fire-style"><option value="points">Points (FRP colour)</option><option value="heat">Heatmap</option><option value="cluster">Hotspot clusters</option></select></label>
+            <fieldset class="chips" id="conf-filter"><legend>Confidence</legend>
+              <label><input type="checkbox" value="low" checked> low</label><label><input type="checkbox" value="nominal" checked> nominal</label><label><input type="checkbox" value="high" checked> high</label></fieldset>
+            <label>Min FRP: <b id="frp-val">0</b> MW<input type="range" id="frp-min" min="0" max="100" step="1" value="0"></label>
+            <p class="meta" id="fire-meta">—</p>
+          </div>
+        </div>
+        <div class="lyr" data-k="official incidents usa us nifc wfigs status">
+          <label class="chk"><input type="checkbox" id="lyr-inc-us"> USA official incidents <span class="tag ref">NIFC</span></label>
+          <p class="meta" id="meta-inc-us"></p></div>
+        <div class="lyr" data-k="official incidents canada cwfis status">
+          <label class="chk"><input type="checkbox" id="lyr-inc-ca"> Canada official incidents <span class="tag ref">CWFIS</span></label>
+          <p class="meta" id="meta-inc-ca"></p></div>
+        <div class="lyr" data-k="density history grid 3d columns modis archive">
+          <label class="chk"><input type="checkbox" id="lyr-grid"> Fire density 2001–2026 <span class="tag hist">archive</span></label>
+          <div class="sub"><label>Year: <b id="grid-year-val">all-year mean</b><input type="range" id="grid-year" min="2000" max="2026" value="2000"></label>
+          <p class="meta">0.25° cells; tilt the map (right-drag) or use the <b>3D</b> view to see columns.</p></div></div>
+        <div class="lyr" data-k="burned area mcd64"><label class="chk disabled"><input type="checkbox" disabled> Burned area <span class="tag plan">planned</span></label>
+          <p class="meta">MODIS MCD64A1 needs Earthdata processing.</p></div>
+      </details>
+
+      <details open class="grp"><summary>Weather &amp; imagery</summary>
+        <div class="lyr" data-k="wind gfs particles">
+          <label class="chk"><input type="checkbox" id="lyr-wind"> Wind 10 m (animated) <span class="tag sat">GFS</span></label>
+          <p class="meta" id="meta-wind"></p></div>
+        <div class="lyr" data-k="clouds himawari infrared geostationary asia india">
+          <label class="chk"><input type="checkbox" id="lyr-himawari" data-gibs="Himawari_AHI_Band13_Clean_Infrared"> Clouds: Himawari IR, Asia (10 min)</label>
+          <p class="meta" data-meta="Himawari_AHI_Band13_Clean_Infrared"></p></div>
+        <div class="lyr" data-k="geocolor goes geostationary americas clouds">
+          <label class="chk"><input type="checkbox" id="lyr-goes-e" data-gibs="GOES-East_ABI_GeoColor"> GeoColor: GOES-East, Americas</label>
+          <p class="meta" data-meta="GOES-East_ABI_GeoColor"></p></div>
+        <div class="lyr" data-k="geocolor goes west pacific geostationary">
+          <label class="chk"><input type="checkbox" id="lyr-goes-w" data-gibs="GOES-West_ABI_GeoColor"> GeoColor: GOES-West, Pacific</label>
+          <p class="meta" data-meta="GOES-West_ABI_GeoColor"></p></div>
+        <div class="lyr" data-k="smoke aerosol index omps dust">
+          <label class="chk"><input type="checkbox" id="lyr-omps" data-gibs="OMPS_Aerosol_Index"> Smoke &amp; dust: UV aerosol index (daily)</label>
+          <p class="meta" data-meta="OMPS_Aerosol_Index"></p></div>
+        <div class="lyr" data-k="aerosol optical depth maiac smoke haze">
+          <label class="chk"><input type="checkbox" id="lyr-aod" data-gibs="MODIS_Combined_MAIAC_L2G_AerosolOpticalDepth"> Aerosol optical depth (MAIAC, daily)</label>
+          <p class="meta" data-meta="MODIS_Combined_MAIAC_L2G_AerosolOpticalDepth"></p></div>
+        <label class="opacity">Imagery opacity <b id="img-op-v">70%</b><input type="range" id="img-op" min="10" max="100" value="70"></label>
+      </details>
+
+      <details open class="grp"><summary>Hazards</summary>
+        <div class="lyr" data-k="gdacs disaster alerts earthquake flood cyclone volcano drought">
+          <label class="chk"><input type="checkbox" id="lyr-gdacs"> GDACS disaster alerts</label><p class="meta" id="meta-gdacs"></p></div>
+        <div class="lyr" data-k="tropical cyclone hurricane tracks gdacs">
+          <label class="chk"><input type="checkbox" id="lyr-tc"> Tropical cyclone tracks</label></div>
+      </details>
+
+      <details open class="grp"><summary>Reference</summary>
+        <div class="lyr" data-k="india states boundaries survey">
+          <label class="chk"><input type="checkbox" id="lyr-states" checked> India states <span class="tag ref">SOI/NWIC</span></label>
+          <div class="sub"><label class="chk"><input type="checkbox" id="lyr-choro"> Colour by total detections</label></div></div>
+        <div class="lyr" data-k="labels places names">
+          <label class="chk"><input type="checkbox" id="lyr-labels" checked> Place labels</label></div>
+        <div class="lyr" data-k="satellites orbit tracks sgp4">
+          <label class="chk"><input type="checkbox" id="lyr-sats" checked> Satellites &amp; ground tracks <span class="tag sat">SGP4 est.</span></label>
+          <div class="sub">
+            <div class="seg small" id="sat-filter"><button data-f="all" class="active">All</button><button data-f="fire">Fire sensors</button><button data-f="earth">Other EO</button></div>
+            <ul id="sat-list" class="list"></ul><p class="meta" id="sat-meta">—</p></div></div>
+        <div class="lyr" data-k="energy infrastructure power pipelines"><label class="chk disabled"><input type="checkbox" disabled> Energy infrastructure <span class="tag plan">planned</span></label></div>
+      </details>
+    </div>
+  </aside>
+
+  <!-- basemap menu -->
+  <div id="basemaps" class="pop pop-rail" hidden>
+    <label>Basemap<select id="basemap">
+      <option value="sat">Satellite + labels</option><option value="dark">Dark</option><option value="light">Light</option>
+      <option value="streets">Streets</option><option value="topo">Topographic</option>
+      <option value="gibs">NASA VIIRS true colour (latest)</option><option value="night">Night lights (Black Marble)</option></select></label>
+    <label>View</label>
+    <div class="seg" id="proj-seg"><button data-proj="globe" class="active">Globe</button><button data-proj="mercator">2D map</button><button data-proj="3d" title="3D terrain relief">3D</button></div>
+  </div>
+
+  <!-- legend -->
+  <div id="legend" class="pop pop-rail legend" hidden></div>
+
+  <!-- fire spread simulation -->
+  <aside id="sim" class="pop panel-right" hidden>
+    <div class="panel-head"><h2>Fire spread simulation · Rothermel</h2><button class="icon-btn x" id="sim-close" aria-label="Close">✕</button></div>
+    <div class="panel-body" id="sim-body"></div>
+  </aside>
+
+  <!-- statistics panel -->
+  <aside id="info" class="pop panel-right" hidden>
+    <div class="panel-head"><h2 id="info-title">India · 2001–2026</h2><button class="icon-btn x" data-close="info" aria-label="Close">✕</button></div>
+    <div class="panel-body" id="info-body"></div>
+  </aside>
+
+  <div id="draw-hint" class="hint hidden">Click to add points · double-click to finish · Esc to cancel</div>
+
+  <footer class="timeline">
+    <button id="play" class="icon-btn" aria-label="Play">▶</button>
+    <input type="range" id="time" min="0" max="100" value="100" aria-label="Show detections up to">
+    <span id="time-label">—</span>
+    <span class="utc" id="clock"></span>
+  </footer>
+</main>
+
+<main id="page-analytics" class="page doc"></main>
+<main id="page-climate" class="page doc"></main>
+<main id="page-danger" class="page doc"></main>
+<main id="page-india" class="page doc"></main>
+<main id="page-research" class="page doc"></main>
+<main id="page-catalogue" class="page doc"></main>
+<main id="page-about" class="page doc"></main>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script src="env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+httpx==0.28.1
+sgp4==2.23
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11
+shapely>=2.0
+pyarrow>=15
+xarray>=2024.1
+eccodes>=2.38      # GFS wind GRIB decoding (wheel bundles the ecCodes library)
+cfgrib>=0.9.14
+# only for scripts/build_history.py
+geopandas>=0.14
+# tests
+pytest==8.3.4

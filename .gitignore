@@ -1,0 +1,10 @@
+.env
+__pycache__/
+.pytest_cache/
+*.pyc
+backend/cache/
+deploy/hf-space/backend/
+deploy/hf-space/frontend/
+deploy/hf-space/data/
+*.part
+.claude/

@@ -1,0 +1,38 @@
+# Publishes frontend/ to GitHub Pages (https://premsingh28.github.io/kpsterra).
+# The page talks to the backend on the Hugging Face Space set in the repository variable KPSTERRA_API
+# (Settings -> Secrets and variables -> Actions -> Variables), e.g. https://<hf-user>-kpsterra.hf.space
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["frontend/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Point the site at the Hugging Face backend
+        run: |
+          rm -rf frontend/tests
+          echo "window.KPSTERRA_API = '${{ vars.KPSTERRA_API }}';" > frontend/env.js
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend
+      - id: deployment
+        uses: actions/deploy-pages@v4
